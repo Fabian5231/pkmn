@@ -90,6 +90,18 @@
   }
   button:hover { filter: brightness(1.05); }
 
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  button.ghost {
+    background: var(--card-2);
+    color: var(--text);
+    border: 1px solid var(--line);
+    font-weight: 600;
+  }
+  .file-status { font-size: .8rem; color: var(--muted); margin-left: auto; }
+  .file-status.linked { color: var(--green); }
+  .file-status.saving { color: var(--accent); }
+  .file-status.error  { color: var(--red); }
+
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--line); font-size: .92rem; }
   th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -154,6 +166,10 @@
     <button type="submit">+ Hinzufügen</button>
   </form>
 
+  <div class="toolbar">
+    <span id="status" class="file-status">Lädt …</span>
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -170,11 +186,48 @@
 </div>
 
 <script>
-  const KEY = "ttb_tracker_items";
-  let items = JSON.parse(localStorage.getItem(KEY) || "[]");
+  let items = [];
+  let saveTimer = null;   // Debounce, damit Tippen nicht bei jedem Zeichen sendet
 
   const eur = n => n.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-  function save() { localStorage.setItem(KEY, JSON.stringify(items)); }
+
+  function setStatus(text, cls) {
+    const el = document.getElementById("status");
+    el.textContent = text;
+    el.className = "file-status" + (cls ? " " + cls : "");
+  }
+
+  // Daten vom Server laden
+  async function load() {
+    try {
+      const res = await fetch("/api/items", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      items = await res.json();
+      setStatus("✔ Automatisch gespeichert", "linked");
+    } catch (err) {
+      items = [];
+      setStatus("⚠ Server nicht erreichbar – läuft „node server.js“?", "error");
+    }
+  }
+
+  // Automatisch im Hintergrund speichern (debounced)
+  function save() {
+    setStatus("Speichert …", "saving");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/items", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(items)
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        setStatus("✔ Automatisch gespeichert", "linked");
+      } catch (err) {
+        setStatus("⚠ Speichern fehlgeschlagen", "error");
+      }
+    }, 300);
+  }
 
   function renderTotals() {
     const current  = items.reduce((s, it) => s + it.value * it.qty, 0);
@@ -253,7 +306,8 @@
     }
   });
 
-  render();
+  // Start: Daten laden und anzeigen
+  load().then(render);
 </script>
 </body>
 </html>
