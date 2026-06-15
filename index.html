@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TTB Wert-Tracker</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-2: #232734;
+    --line: #2e3342;
+    --text: #e7e9ee;
+    --muted: #9aa0ad;
+    --accent: #ffcb05;      /* Pokémon-Gelb */
+    --accent-2: #3b5ba5;    /* Pokémon-Blau */
+    --green: #2ec27e;
+    --red: #ef5b5b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 20px 18px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #161925, var(--bg));
+  }
+  header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  header h1 span { color: var(--accent); }
+  header p { margin: 0; color: var(--muted); font-size: .9rem; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 20px; }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat .label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stat .value { font-size: 1.45rem; font-weight: 700; margin-top: 4px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  form.add {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 24px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  input, select {
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: .92rem;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent-2); border-color: transparent; }
+  button {
+    background: var(--accent);
+    color: #1a1d27;
+    border: none;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: .92rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { filter: brightness(1.05); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--line); font-size: .92rem; }
+  th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; }
+  tr.empty td { text-align: center; color: var(--muted); padding: 30px; }
+  .del { background: transparent; color: var(--red); border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
+
+  .note {
+    margin-top: 26px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  .note code { background: var(--card-2); padding: 1px 6px; border-radius: 5px; color: var(--accent); }
+  .demo-badge {
+    display: inline-block; background: var(--accent-2); color: #fff;
+    font-size: .7rem; padding: 2px 8px; border-radius: 20px; margin-left: 8px; vertical-align: middle;
+  }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr; }
+    form.add { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎴 <span>Top-Trainer-Box</span> Wert-Tracker</h1>
+  <p>Behalte den Wert deiner versiegelten TTBs im Blick<span class="demo-badge">Demo-Daten</span></p>
+</header>
+
+<div class="wrap">
+  <div class="summary">
+    <div class="stat">
+      <div class="label">Aktueller Wert</div>
+      <div class="value" id="sumCurrent">–</div>
+    </div>
+    <div class="stat">
+      <div class="label">Investiert</div>
+      <div class="value" id="sumInvested">–</div>
+    </div>
+    <div class="stat">
+      <div class="label">Gewinn / Verlust</div>
+      <div class="value" id="sumProfit">–</div>
+    </div>
+  </div>
+
+  <form class="add" id="addForm">
+    <div class="field">
+      <label for="name">Box / Set</label>
+      <input list="catalog" id="name" placeholder="z.B. Karmesin & Purpur TTB" required />
+      <datalist id="catalog"></datalist>
+    </div>
+    <div class="field">
+      <label for="qty">Anzahl</label>
+      <input type="number" id="qty" min="1" value="1" required />
+    </div>
+    <div class="field">
+      <label for="paid">Kaufpreis € (Stk.)</label>
+      <input type="number" id="paid" min="0" step="0.01" placeholder="optional" />
+    </div>
+    <button type="submit">+ Hinzufügen</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Box / Set</th>
+        <th class="num">Anzahl</th>
+        <th class="num">Kaufpreis</th>
+        <th class="num">Akt. Wert (Stk.)</th>
+        <th class="num">Gesamt</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="note">
+    <strong>So bindest du später eine echte Preis-API an:</strong><br />
+    Im Quelltext (Bereich <code>// === API-KONFIG ===</code>) trägst du
+    <code>API_BASE</code> und <code>API_KEY</code> ein und ersetzt die Funktion
+    <code>fetchPrice()</code> durch einen echten Aufruf. Aktuell liefert sie Demo-Werte
+    aus dem eingebauten Katalog. Deine Liste wird lokal im Browser gespeichert.
+  </div>
+</div>
+
+<script>
+  // =================================================================
+  // === API-KONFIG ===  (später echte Quelle hier eintragen)
+  // =================================================================
+  const API_BASE = "";   // z.B. "https://api.pokemonpricetracker.com/v1"
+  const API_KEY  = "";   // dein Token
+
+  // Demo-Katalog: bekannte deutsche Top-Trainer-Boxen mit Beispielwerten (€)
+  const DEMO_CATALOG = {
+    "Karmesin & Purpur TTB":        49.90,
+    "Paldea Evolved TTB":           52.00,
+    "Obsidianflammen TTB":          47.50,
+    "Paradoxrift TTB":              55.00,
+    "Paldeas Schicksale TTB":       58.00,
+    "Entwicklungen in Paldea TTB":  46.00,
+    "Maskerade im Zwielicht TTB":   44.90,
+    "Schimmernde Funken TTB":       42.00,
+    "151 TTB":                      89.00,
+    "Steltrix TTB":                 41.50,
+    "Königsdämmerung TTB":          43.00,
+    "Schwert & Schild TTB":         60.00,
+    "Strahlende Sterne TTB":        65.00,
+    "Verlorener Ursprung TTB":      70.00,
+    "Silberne Sturmwinde TTB":      62.00,
+    "Crown Zenith TTB":             68.00
+  };
+
+  // Liefert den aktuellen Wert (€) für eine Box.
+  // DEMO: nimmt den Katalogwert. Für echte Daten hier den API-Aufruf einsetzen:
+  //
+  //   const r = await fetch(`${API_BASE}/sealed?q=${encodeURIComponent(name)}`, {
+  //     headers: { Authorization: `Bearer ${API_KEY}` }
+  //   });
+  //   const data = await r.json();
+  //   return data.price;   // je nach API-Struktur anpassen
+  //
+  async function fetchPrice(name) {
+    return DEMO_CATALOG[name] ?? 0;
+  }
+
+  // ---------------- App-Logik ----------------
+  const KEY = "ttb_tracker_items";
+  let items = JSON.parse(localStorage.getItem(KEY) || "[]");
+
+  const eur = n => n.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+
+  function save() { localStorage.setItem(KEY, JSON.stringify(items)); }
+
+  function fillCatalog() {
+    document.getElementById("catalog").innerHTML =
+      Object.keys(DEMO_CATALOG).map(n => `<option value="${n}">`).join("");
+  }
+
+  function render() {
+    const tbody = document.getElementById("rows");
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr class="empty"><td colspan="6">Noch keine Boxen – oben hinzufügen 👆</td></tr>`;
+    } else {
+      tbody.innerHTML = items.map((it, i) => {
+        const total = it.value * it.qty;
+        return `<tr>
+          <td>${it.name}</td>
+          <td class="num">${it.qty}</td>
+          <td class="num">${it.paid ? eur(it.paid) : "–"}</td>
+          <td class="num">${eur(it.value)}</td>
+          <td class="num">${eur(total)}</td>
+          <td class="num"><button class="del" data-i="${i}" title="Entfernen">✕</button></td>
+        </tr>`;
+      }).join("");
+    }
+
+    const current  = items.reduce((s, it) => s + it.value * it.qty, 0);
+    const invested = items.reduce((s, it) => s + (it.paid || 0) * it.qty, 0);
+    const profit   = current - invested;
+
+    document.getElementById("sumCurrent").textContent  = eur(current);
+    document.getElementById("sumInvested").textContent = invested ? eur(invested) : "–";
+    const pEl = document.getElementById("sumProfit");
+    if (invested) {
+      pEl.textContent = (profit >= 0 ? "+" : "") + eur(profit);
+      pEl.className = "value " + (profit >= 0 ? "pos" : "neg");
+    } else {
+      pEl.textContent = "–";
+      pEl.className = "value";
+    }
+  }
+
+  document.getElementById("addForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const qty  = parseInt(document.getElementById("qty").value, 10) || 1;
+    const paidRaw = document.getElementById("paid").value;
+    const paid = paidRaw ? parseFloat(paidRaw) : null;
+    if (!name) return;
+
+    const value = await fetchPrice(name);
+    items.push({ name, qty, paid, value });
+    save();
+    render();
+    e.target.reset();
+    document.getElementById("qty").value = 1;
+  });
+
+  document.getElementById("rows").addEventListener("click", (e) => {
+    if (e.target.classList.contains("del")) {
+      items.splice(+e.target.dataset.i, 1);
+      save();
+      render();
+    }
+  });
+
+  fillCatalog();
+  render();
+</script>
+</body>
+</html>
