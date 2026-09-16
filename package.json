@@ -1,0 +1,10 @@
+{
+  "name": "ttb-wert-tracker",
+  "version": "1.0.0",
+  "description": "Top-Trainer-Box Wert-Tracker mit automatischer Speicherung im Hintergrund",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "private": true
+}
