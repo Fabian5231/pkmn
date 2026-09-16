@@ -109,6 +109,8 @@
   td.num, th.num { text-align: right; }
   tr.empty td { text-align: center; color: var(--muted); padding: 30px; }
   .del { background: transparent; color: var(--red); border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
+  #rows a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+  #rows a:hover { border-bottom-color: var(--accent); color: var(--accent); }
 
   /* Inline editierbarer Wert in der Tabelle */
   input.edit-val {
@@ -254,8 +256,11 @@
     } else {
       tbody.innerHTML = items.map((it, i) => {
         const total = it.value * it.qty;
+        const nameCell = it.link
+          ? `<a href="${it.link}" target="_blank" rel="noopener noreferrer">${it.name}</a>`
+          : it.name;
         return `<tr>
-          <td>${it.name}</td>
+          <td>${nameCell}</td>
           <td class="num">${it.qty}</td>
           <td class="num">${it.paid ? eur(it.paid) : "–"}</td>
           <td class="num">
