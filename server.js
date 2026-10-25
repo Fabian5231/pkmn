@@ -51,6 +51,11 @@ function readBody(req) {
   });
 }
 
+// Host aus einem Origin-Header; "null" oder Unsinn zaehlt als fremd.
+function hostOf(origin) {
+  try { return new URL(origin).host; } catch { return null; }
+}
+
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
   res.writeHead(status, { "Content-Type": MIME[".json"] });
@@ -81,6 +86,17 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, await readItems());
     }
     if (req.method === "PUT" || req.method === "POST") {
+      // Das Login-Cookie gilt fuer alle *.fabian-social.dev-Seiten: Schreiben nur als JSON
+      // (erzwingt bei fremden Seiten einen CORS-Preflight) und nur von dieser Seite selbst.
+      const site = req.headers["sec-fetch-site"];
+      const origin = req.headers.origin;
+      if ((site && site !== "same-origin" && site !== "none") ||
+          (origin && hostOf(origin) !== req.headers.host)) {
+        return sendJson(res, 403, { ok: false, error: "Anfrage von fremder Seite abgelehnt" });
+      }
+      if (!(req.headers["content-type"] || "").toLowerCase().startsWith("application/json")) {
+        return sendJson(res, 415, { ok: false, error: "Content-Type: application/json erwartet" });
+      }
       try {
         const body = await readBody(req);
         const data = JSON.parse(body);
