@@ -8,6 +8,7 @@ const fs = require("fs/promises");
 const path = require("path");
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || "127.0.0.1";
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, "data.json");
 
@@ -98,7 +99,7 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(405); res.end("Method Not Allowed");
 });
 
-server.listen(PORT, () => {
-  console.log(`TTB-Tracker läuft auf  http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`TTB-Tracker läuft auf  http://${HOST}:${PORT}`);
   console.log(`Daten werden gespeichert in:  ${DATA_FILE}`);
 });
